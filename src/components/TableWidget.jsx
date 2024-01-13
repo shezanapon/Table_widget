@@ -1,73 +1,98 @@
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import axios from 'axios';
-import React, { useState } from 'react';
+import {
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  tableCellClasses,
+} from "@mui/material";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
 
-
-function createData(ID,Date,Info) {
-    return { ID,Date,Info};
-  }
-  
-  const rows = [
-    createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-    createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-    createData('Eclair', 262, 16.0, 24, 6.0),
-    
-  ];
 const TableWidget = () => {
-    const [data,setData]=useState([])
-    const fetchData = async () => {
-            let config = {
-              method: "get",
-              maxBodyLength: Infinity,
-              url: "https://api.easy-pluginz.com/admin/v2/utils/responselogs",
-              headers: {
-                orgid: "10698000000106085",
-              },
-            };
-        
-            const res = await axios.request(config);
-           
-            
-        fetchData();
-        console.log("obj",res?.data);
-            setData(res?.data);
-           
-          };
-    return (
-        <div style={{padding:"50px 50px 50px 50px"}}>
-            {console.log(data)}
-               <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="simple table">
-        <TableHead>
-          <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell align="right">Date</TableCell>
-            <TableCell align="right">Info</TableCell>
-           
-          </TableRow>
-        </TableHead>
-        
-          {rows.map((row) => (
-            <TableBody>
-            <TableRow
-              key={row.ID}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell component="th" scope="row">
-                {row.ID}
-              </TableCell>
-              <TableCell align="right">{row.Date}</TableCell>
-              <TableCell align="right">{row.Info}</TableCell>
-             
-            </TableRow>
-            </TableBody>
-          ))}
-        
-      </Table>
-    </TableContainer>
-            
-        </div>
+  const [data, setData] = useState([]);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [page, setPage] = React.useState(0);
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(+event.target.value);
+    setPage(0);
+  };
+  const fetchData = async () => {
+    let config = {
+      method: "get",
+      maxBodyLength: Infinity,
+      url: "https://api.easy-pluginz.com/admin/v2/utils/responselogs",
+      headers: {
+        orgid: "10698000000106085",
+      },
+    };
+
+    const res = await axios.request(config);
+
+    console.log("obj", res?.data.data);
+    const formattedData = res?.data.data.map((row) => ({
+      ...row,
+      created_at: new Date(row.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+      }),
+    }));
+    const sortedData = formattedData.sort(
+      (a, b) => new Date(...a.created_at) - new Date(...b.created_at)
     );
+
+    setData(sortedData);
+  };
+  useEffect(() => {
+    fetchData();
+  }, []);
+  return (
+    <div style={{ padding: "50px 150px 150px 150px" }}>
+      <TableContainer component={Paper}>
+        <Table sx={{ minWidth: 50 }} aria-label="customized table">
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                <h3>ID</h3>
+              </TableCell>
+              <TableCell align="right">
+                <h3>DATE</h3>
+              </TableCell>
+              <TableCell align="right">
+                <h3>INFO</h3>
+              </TableCell>
+              <TableCell align="right">
+                <h3>RESPONSE</h3>
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.map((row) => (
+              <TableRow
+                key={row.id}
+                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+              >
+                <TableCell component="th" scope="row">
+                  {row.id}
+                </TableCell>
+                <TableCell align="right">{row.created_at}</TableCell>
+                <TableCell align="right">{row.req}</TableCell>
+                <TableCell align="right">{row.res}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
+  );
 };
 
 export default TableWidget;
