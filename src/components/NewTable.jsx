@@ -134,60 +134,9 @@ EnhancedTableHead.propTypes = {
   rowCount: PropTypes.number.isRequired,
 };
 
-function EnhancedTableToolbar(props) {
-  const { numSelected } = props;
 
-  return (
-    <Toolbar
-      sx={{
-        pl: { sm: 2 },
-        pr: { xs: 1, sm: 1 },
-        ...(numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-        }),
-      }}
-    >
-      {numSelected > 0 ? (
-        <Typography
-          sx={{ flex: '1 1 100%' }}
-          color="inherit"
-          variant="subtitle1"
-          component="div"
-        >
-          {numSelected} selected
-        </Typography>
-      ) : (
-        <Typography
-          sx={{ flex: '1 1 100%' }}
-          variant="h6"
-          id="tableTitle"
-          component="div"
-        >
-          Nutrition
-        </Typography>
-      )}
 
-      {numSelected > 0 ? (
-        <Tooltip title="Delete">
-          <IconButton>
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      ) : (
-        <Tooltip title="Filter list">
-          <IconButton>
-            <FilterListIcon />
-          </IconButton>
-        </Tooltip>
-      )}
-    </Toolbar>
-  );
-}
 
-EnhancedTableToolbar.propTypes = {
-  numSelected: PropTypes.number.isRequired,
-};
 
 export default function EnhancedTable() {
   const [order, setOrder] = React.useState('asc');
@@ -197,7 +146,7 @@ export default function EnhancedTable() {
   const [dense, setDense] = React.useState(false);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [data, setData] = React.useState([]);
-  
+  const [loading, setLoading] = React.useState(true);
   const fetchData = async () => {
     let config = {
       method: "get",
@@ -225,6 +174,7 @@ export default function EnhancedTable() {
    
 
     setData(formattedData);
+    setLoading(false);
   };
   React.useEffect(() => {
     fetchData();
@@ -290,11 +240,15 @@ export default function EnhancedTable() {
       ),
     [order, orderBy, page, rowsPerPage],
   );
+  if (loading) {
+    // Return a loading state or spinner while data is being fetched
+    return <div>Loading...</div>;
+  }
 
   return (
     <Box sx={{ width: '80%',padding:"50px 50px 50px 150px" }}>
       <Paper sx={{ width: '100%', mb: 2,pl:2 }}>
-        <EnhancedTableToolbar numSelected={selected.length} />
+       
         <TableContainer>
           <Table
             sx={{ minWidth: 750 }}
@@ -310,7 +264,7 @@ export default function EnhancedTable() {
               rowCount={data.length}
             />
             <TableBody>
-              {data.map((row, index) => {
+              {visibleRows.map((row, index) => {
                 const isItemSelected = isSelected(row.id);
                 const labelId = `enhanced-table-checkbox-${index}`;
 
