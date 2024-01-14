@@ -43,10 +43,6 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-// Since 2020 all major browsers ensure sort stability with Array.prototype.sort().
-// stableSort() brings sort stability to non-modern browsers (notably IE11). If you
-// only support modern browsers you can replace stableSort(exampleArray, exampleComparator)
-// with exampleArray.slice().sort(exampleComparator)
 function stableSort(array, comparator) {
   const stabilizedThis = array.map((el, index) => [el, index]);
   stabilizedThis.sort((a, b) => {
@@ -88,7 +84,7 @@ const headCells = [
 ];
 
 function EnhancedTableHead(props) {
-  const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } =
+  const {  order, orderBy, onRequestSort } =
     props;
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
@@ -128,7 +124,7 @@ function EnhancedTableHead(props) {
 EnhancedTableHead.propTypes = {
   numSelected: PropTypes.number.isRequired,
   onRequestSort: PropTypes.func.isRequired,
-  onSelectAllClick: PropTypes.func.isRequired,
+  // onSelectAllClick: PropTypes.func.isRequired,
   order: PropTypes.oneOf(['asc', 'desc']).isRequired,
   orderBy: PropTypes.string.isRequired,
   rowCount: PropTypes.number.isRequired,
@@ -141,10 +137,10 @@ EnhancedTableHead.propTypes = {
 export default function EnhancedTable() {
   const [order, setOrder] = React.useState('asc');
   const [orderBy, setOrderBy] = React.useState('date');
-  const [selected, setSelected] = React.useState([]);
+ 
   const [page, setPage] = React.useState(0);
   const [dense, setDense] = React.useState(false);
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [data, setData] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const fetchData = async () => {
@@ -160,95 +156,81 @@ export default function EnhancedTable() {
     const res = await axios.request(config);
 
     console.log("obj", res?.data.data);
-    const formattedData = res?.data.data.map((row) => ({
+    const formattedData = res?.data?.data.map((row) => ({
       ...row,
       created_at: new Date(row.created_at).toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "2-digit",
         year: "2-digit",
         hour: "2-digit",
-    minute: "2-digit",
+        minute: "2-digit",
     // second: "2-digit",
       }),
     }));
-   
-
+    // formattedData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+// console.log("shezan",formattedData);
     setData(formattedData);
     setLoading(false);
   };
   React.useEffect(() => {
     fetchData();
   }, []);
+  React.useEffect(() => {
+  
+    handleRequestSort(null, 'date', 'asc');
+  }, []); 
+
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
-
-  const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-      const newSelected = data.map((n) => n.id);
-      setSelected(newSelected);
-      return;
+  const compareDates = (a, b, order) => {
+    const dateA = new Date(a.created_at);
+    const dateB = new Date(b.created_at);
+  
+    if (order === 'asc') {
+      return dateA - dateB;
+    } else {
+      return dateB - dateA;
     }
-    setSelected([]);
   };
-
-  const handleClick = (event, id) => {
-    const selectedIndex = selected.indexOf(id);
-    let newSelected = [];
-
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1),
-      );
-    }
-    setSelected(newSelected);
-  };
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
+  
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
 
   const handleChangeDense = (event) => {
     setDense(event.target.checked);
   };
 
-  const isSelected = (id) => selected.indexOf(id) !== -1;
-
-  // Avoid a layout jump when reaching the last page with empty rows.
+  
   const emptyRows =
     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
 
-  const visibleRows = React.useMemo(
-    () =>
-      stableSort(data, getComparator(order, orderBy)).slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage,
-      ),
-    [order, orderBy, page, rowsPerPage],
-  );
+    const visibleRows = React.useMemo(
+      () =>
+        stableSort(data, (a, b) =>
+          orderBy === 'date'
+            ? compareDates(a, b, order)
+            : getComparator(order, orderBy)
+        ).slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+      [data,order, orderBy, page, rowsPerPage]
+    );
   if (loading) {
     // Return a loading state or spinner while data is being fetched
     return <div>Loading...</div>;
   }
+  
+  
 
   return (
     <Box sx={{ width: '80%',padding:"50px 50px 50px 150px" }}>
-      <Paper sx={{ width: '100%', mb: 2,pl:2 }}>
-       
+      <Paper sx={{ width: '100%', mb: 2,pl:2 }}>       
         <TableContainer>
           <Table
             sx={{ minWidth: 750 }}
@@ -256,34 +238,27 @@ export default function EnhancedTable() {
             size={dense ? 'small' : 'medium'}
           >
             <EnhancedTableHead
-              numSelected={selected.length}
+              // numSelected={selected.length}
               order={order}
               orderBy={orderBy}
-              onSelectAllClick={handleSelectAllClick}
               onRequestSort={handleRequestSort}
               rowCount={data.length}
             />
             <TableBody>
               {visibleRows.map((row, index) => {
-                const isItemSelected = isSelected(row.id);
-                const labelId = `enhanced-table-checkbox-${index}`;
 
                 return (
                   <TableRow
                     hover
-                    onClick={(event) => handleClick(event, row.id)}
                     role="checkbox"
-                    aria-checked={isItemSelected}
-                    tabIndex={-1}
                     key={row.id}
-                    selected={isItemSelected}
                     sx={{ cursor: 'pointer' }}
                   >
                     
                     
                     <TableCell
                       component="th"
-                      id={labelId}
+                      // id={labelId}
                       scope="row"
                       padding="none"
                     >
@@ -309,7 +284,7 @@ export default function EnhancedTable() {
           </Table>
         </TableContainer>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[10,15,25]}
           component="div"
           count={data.length}
           rowsPerPage={rowsPerPage}
